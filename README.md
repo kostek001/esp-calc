@@ -3,7 +3,7 @@ ESP32 Calculator with special features
 
 Made with PlatformIO
 
-ToDo:
+## ToDo:
 1. Add ChatGPT connection
     - Connection to WiFi
     - Keyboard
