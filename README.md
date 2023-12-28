@@ -1,4 +1,4 @@
-# esp-calc WIP
+# esp32-calc WIP
 ESP32 Calculator with special features
 
 ![Static Badge](https://img.shields.io/badge/esp-E7352C?style=for-the-badge&logo=espressif&logoColor=white)
