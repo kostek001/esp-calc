@@ -1,0 +1,152 @@
+# Custom Extensions
+
+## Binding to Custom Variables {-}
+
+::: {.minipage data-latex="{\textwidth}"}
+Along with the built-in functions and constants, you can create custom variables\index{variables!binding to custom}  for use in expressions. For example:
+
+```cpp
+#include "tinyexpr.h"
+#include <iostream>
+#include <iomanip>
+
+int main(int argc, char* argv[])
+    {
+    if (argc < 2)
+        {
+        std::cout << "Usage: example \"expression\"\n";
+        return EXIT_SUCCESS;
+        }
+
+    const char* expression = argv[1];
+    std::cout << "Evaluating:\n\t" << expression << "\n";
+
+    /* The variables x and y are bound at eval-time. */
+    double x{ 0 }, y{ 0 };
+    // Store variable names and pointers.
+    te_parser tep;
+    tep.set_variables_and_functions({ {"x", &x}, {"y", &y} });
+
+    /* This will compile the expression and check for errors. */
+    if (tep.compile(expression))
+        {
+        /* The variables can be changed here, and evaluate can be called multiple
+           times. This is efficient because the parsing has already been done.*/
+        x = 3; y = 4;
+        const double r = tep.evaluate();
+        std::cout << "Result:\n\t" << r << "\n";
+        }
+    else
+        {
+        /* Show the user where the error is at. */
+        std::cout << "\t " << std::setfill(' ') <<
+            std::setw(tep.get_last_error_position()) << '^' << "\tError here\n";
+        }
+    return EXIT_SUCCESS;
+    }
+```
+:::
+
+::: {.minipage data-latex="{\textwidth}"}
+## Binding to Custom Functions {-}
+
+*TinyExpr++* can call custom functions\index{functions!binding to custom} also. Here is a short example:
+
+```cpp
+double my_sum(double a, double b)
+    {
+    /* Example function that adds two numbers together. */
+    return a + b;
+    }
+
+te_parser tep;
+tep.set_variables_and_functions(
+{
+    { "mysum", my_sum } // function pointer
+});
+
+const double r = tep.evaluate("mysum(5, 6)");
+// will be 11
+```
+
+Here is an example of using a lambda:
+
+```cpp
+te_parser tep;
+tep.set_variables_and_functions({
+    { "mysum",
+        [](double a, double b) noexcept
+            { return a + b; } }
+    });
+
+const double r = tep.evaluate("mysum(5, 6)");
+// will be 11
+```
+:::
+
+::: {.minipage data-latex="{\textwidth}"}
+## Binding to Custom Classes {-}
+
+A class derived from `te_expr` can be bound to custom functions\index{classes!binding to custom}. This enables you to
+have full access to an object (via these functions) when parsing an expression.
+
+The following demonstrates creating a `te_expr`-derived class which contains an array of values:
+
+```cpp
+class te_expr_array : public te_expr
+    {
+public:
+    explicit te_expr_array(const te_variable_flags type) noexcept :
+        te_expr(type) {}
+    std::array<double, 5> m_data = { 5, 6, 7, 8, 9 };
+    };
+```
+
+Next, create two functions that can accept this object and perform
+actions on it. (Note that proper error handling is not included for brevity.):
+
+```cpp
+// Returns the value of a cell from the object's data.
+double cell(const te_expr* context, double a)
+    {
+    auto* c = dynamic_cast<const te_expr_array*>(context);
+    return static_cast<double>(c->m_data[static_cast<size_t>(a)]);
+    }
+
+// Returns the max value of the object's data.
+double cell_max(const te_expr* context)
+    {
+    auto* c = dynamic_cast<const te_expr_array*>(context);
+    return static_cast<double>(
+        *std::max_element(c->m_data.cbegin(), c->m_data.cend()));
+    }
+```
+
+Finally, create an instance of the class and connect the custom functions to it,
+while also adding them to the parser:
+
+```cpp
+te_expr_array teArray{ TE_DEFAULT };
+
+te_parser tep;
+tep.set_variables_and_functions(
+    {
+        {"cell", cell, TE_DEFAULT, &teArray},
+        {"cellmax", cell_max, TE_DEFAULT, &teArray}
+    });
+
+// change the object's data and evaluate their summation
+// (will be 30)
+teArray.m_data = { 6, 7, 8, 5, 4 };
+auto result = tep.evaluate("SUM(CELL 0, CELL 1, CELL 2, CELL 3, CELL 4)");
+
+// call the other function, getting the object's max value
+// (will be 8)
+res = tep.evaluate("CellMax()");
+```
+
+:::: {.notesection data-latex=""}
+Valid variable and function names consist of a letter or underscore followed by any combination
+of: letters `a`–`z` or `A`–`Z`, digits `0`–`9`, periods, and underscores.
+::::
+:::
