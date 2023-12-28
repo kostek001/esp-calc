@@ -8,7 +8,7 @@ ToDo:
     - Connection to WiFi
     - Keyboard
     - OpenAI request
-2. Add hidden messager
+2. Add hidden messenger
     - Connection to WiFi
     - Web UI for entering message
     - Keyboard
